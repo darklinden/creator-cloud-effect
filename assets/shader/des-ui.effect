@@ -1,0 +1,141 @@
+// Copyright (c) 2017-2020 Xiamen Yaji Software Co., Ltd.
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: sprite-vs:vert
+      frag: sprite-fs:frag
+      depthStencilState:
+        depthTest: false
+        depthWrite: false
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendDstAlpha: one_minus_src_alpha
+      rasterizerState:
+        cullMode: none
+      properties:
+        alphaThreshold: { value: 0.5 }
+        tintColor:            { value: [1, 1, 1, 1], linear: true, editor: { type: color } }
+        maainTexture:         { value: white }
+        maainTilingOffset:    { value: [1, 1, 0, 0] }
+        maainPannerX:         { value: 0 }
+        maainPannerY:         { value: 0 }
+        maaskTexture:         { value: white }
+        maaskTilingOffset:    { value: [1, 1, 0, 0] }
+        maaskPannerX:         { value: 0 }
+        maaskPannerY:         { value: 0 }
+        intensity:            { value: 1 }
+        nooiseTexture:        { value: white }
+        nooiseTilingOffset:   { value: [1, 1, 0, 0] }
+        nooiseIntensity:      { value: 0 }
+        nooisePannerX:        { value: 0 }
+        nooisePannerY:        { value: 0 }
+        magicVec3:            { value: [0.300000012, 0.589999974, 0.109999999, 1] }
+}%
+
+CCProgram sprite-vs %{
+  precision highp float;
+  #include <cc-global>
+
+  in vec3 a_position;
+  in vec2 a_texCoord;
+
+  out vec2 v_uv;
+  out vec4 v_maainTilingOffset;
+  out vec4 v_maaskTilingOffset;
+  out vec4 v_nooiseTilingOffset;
+
+  uniform TexCoords {
+    vec4 maainTilingOffset; 
+    vec4 maaskTilingOffset; 
+    vec4 nooiseTilingOffset; 
+  };
+
+  vec4 vert () {
+
+    vec4 pos = vec4(a_position, 1);
+    pos = cc_matViewProj * pos;
+
+    v_maainTilingOffset = maainTilingOffset;
+    v_maaskTilingOffset = maaskTilingOffset;
+    v_nooiseTilingOffset = nooiseTilingOffset;
+
+    v_uv = a_texCoord * maainTilingOffset.xy + maainTilingOffset.zw;
+
+    return pos;
+  }
+}%
+
+CCProgram sprite-fs %{
+  precision highp float;
+  #include <embedded-alpha>
+  #include <alpha-test>
+  #include <cc-global>
+
+  in vec2 v_uv;
+
+  in vec4 v_maainTilingOffset;
+  in vec4 v_maaskTilingOffset;
+  in vec4 v_nooiseTilingOffset;
+
+  uniform sampler2D maainTexture;
+  uniform sampler2D nooiseTexture;
+  uniform sampler2D maaskTexture;
+
+  uniform Constant {
+    vec4 tintColor;
+    vec4 magicVec3;
+    float maainPannerX;
+    float maainPannerY;
+    float thresold;
+    float intensity;
+    float nooiseIntensity;
+    float nooisePannerX;
+    float nooisePannerY;
+    float maaskPannerX;
+    float maaskPannerY;
+  };
+
+  vec4 frag () {
+
+    vec2 maaskPan = cc_time.xx * vec2(maaskPannerX, maaskPannerY) + v_uv;
+    maaskPan = maaskPan.xy * v_maaskTilingOffset.xy + v_maaskTilingOffset.zw;
+    vec4 maask = CCSampleWithAlphaSeparated(maaskTexture, maaskPan);
+
+    vec2 nooisePan = cc_time.xx * vec2(nooisePannerX, nooisePannerY) + v_uv;
+    nooisePan = nooisePan.xy * v_nooiseTilingOffset.xy + v_nooiseTilingOffset.zw;
+    vec4 nooise = CCSampleWithAlphaSeparated(nooiseTexture, nooisePan);
+
+    float u_xlat6 = v_uv.y * nooiseIntensity;
+    float maainX = dot(nooise.rgb, magicVec3.xyz);
+    vec2 maainPan = vec2(maainX, maainX) * vec2(u_xlat6, u_xlat6) + v_uv;
+    maainPan += cc_time.xx * vec2(maainPannerX, maainPannerY);
+    maainPan = maainPan.xy * v_maainTilingOffset.xy + v_maainTilingOffset.zw;
+
+    vec4 img = vec4(1, 1, 1, 1);
+    img *= CCSampleWithAlphaSeparated(maainTexture, maainPan);
+
+    float u_xlat2x = dot(maask.rgb, magicVec3.xyz);
+    u_xlat2x = maask.a * u_xlat2x;
+    float u_xlat4x = img.a * tintColor.a;
+    u_xlat4x *= u_xlat2x;
+
+    float u_xlat0_d = tintColor.a + tintColor.a;
+    u_xlat0_d -= 1.0;
+    u_xlat0_d = clamp(u_xlat0_d, 0.0, 1.0);
+    u_xlat0_d = img.a * u_xlat0_d;
+
+    u_xlat0_d = ((u_xlat0_d * u_xlat2x) + (-u_xlat4x));
+    u_xlat0_d = u_xlat0_d + u_xlat4x;
+
+    img.rgb *= tintColor.rgb;
+    img.rgb *= vec3(intensity, intensity, intensity);
+    img.rgb *= vec3(u_xlat0_d, u_xlat0_d, u_xlat0_d);
+    img.a *= nooise.a * maask.r;
+
+    ALPHA_TEST(img);
+    return img;
+  }
+}%

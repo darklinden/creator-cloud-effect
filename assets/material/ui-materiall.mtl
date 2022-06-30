@@ -4,7 +4,7 @@
   "_objFlags": 0,
   "_native": "",
   "_effectAsset": {
-    "__uuid__": "30433935-3a7b-4c67-abee-808f3cfa2551",
+    "__uuid__": "ff3f4b7f-1714-49c6-a39f-6c6fd335613e",
     "__expectedType__": "cc.EffectAsset"
   },
   "_techIdx": 0,
@@ -26,27 +26,27 @@
     {
       "tintColor": {
         "__type__": "cc.Color",
-        "r": 233,
-        "g": 43,
-        "b": 43,
+        "r": 0,
+        "g": 255,
+        "b": 82,
         "a": 255
       },
-      "mainTexture": {
+      "maainTexture": {
         "__uuid__": "34eecbee-084e-4bfe-b032-2ef6d4632ca9@6c48a",
         "__expectedType__": "cc.Texture2D"
       },
-      "mainPannerX": 0.1,
-      "maskTexture": {
+      "maainPannerX": 0.1,
+      "maaskTexture": {
         "__uuid__": "40c9d5cd-c10c-4f45-803d-b1d6e7c06986@6c48a",
         "__expectedType__": "cc.Texture2D"
       },
       "intensity": 10,
-      "noiseTexture": {
+      "nooiseTexture": {
         "__uuid__": "9977c263-bedc-4d30-b737-be2ee57646a8@6c48a",
         "__expectedType__": "cc.Texture2D"
       },
-      "noiseIntensity": 0.1,
-      "noisePannerX": -0.1
+      "nooiseIntensity": 0.1,
+      "nooisePannerX": -0.1
     }
   ]
 }
