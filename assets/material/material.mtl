@@ -26,15 +26,16 @@
     {
       "tintColor": {
         "__type__": "cc.Color",
-        "r": 220,
-        "g": 220,
-        "b": 220,
+        "r": 255,
+        "g": 255,
+        "b": 255,
         "a": 220
       },
       "mainTexture": {
         "__uuid__": "34eecbee-084e-4bfe-b032-2ef6d4632ca9@6c48a",
         "__expectedType__": "cc.Texture2D"
       },
+      "mainAddIntensity": 2,
       "mainPannerX": 0.1,
       "maskTexture": {
         "__uuid__": "40c9d5cd-c10c-4f45-803d-b1d6e7c06986@6c48a",

@@ -16,6 +16,7 @@ CCEffect %{
       properties: 
         tintColor:            { value: [1, 1, 1, 1], linear: true, editor: { type: color } }
         mainTexture:          { value: white }
+        mainAddIntensity:     { value: 0 }
         mainTilingOffset:     { value: [1, 1, 0, 0] }
         mainPannerX:          { value: 0 }
         mainPannerY:          { value: 0 }
@@ -95,6 +96,7 @@ CCProgram unlit-fs %{
     float noisePannerY;
     float maskPannerX;
     float maskPannerY;
+    float mainAddIntensity;
   };
 
   vec4 frag() {
@@ -132,6 +134,8 @@ CCProgram unlit-fs %{
     img.rgb *= vec3(intensity, intensity, intensity);
     img.rgb *= vec3(u_xlat0_d, u_xlat0_d, u_xlat0_d);
     img.a *= noise.a * mask.r;
+
+    img.rgba += img.rgba * vec4(mainAddIntensity, mainAddIntensity, mainAddIntensity, mainAddIntensity);
   
 
     // float mainX = mainPannerX == 0.0 ? 0.0 : mod(cc_time.x, mainPannerX) / mainPannerX;

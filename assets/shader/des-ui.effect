@@ -19,6 +19,7 @@ CCEffect %{
         alphaThreshold: { value: 0.5 }
         tintColor:            { value: [1, 1, 1, 1], linear: true, editor: { type: color } }
         maainTexture:         { value: white }
+        maainAddIntensity:    { value: 0 }
         maainTilingOffset:    { value: [1, 1, 0, 0] }
         maainPannerX:         { value: 0 }
         maainPannerY:         { value: 0 }
@@ -96,6 +97,7 @@ CCProgram sprite-fs %{
     float nooisePannerY;
     float maaskPannerX;
     float maaskPannerY;
+    float maainAddIntensity;
   };
 
   vec4 frag () {
@@ -134,6 +136,8 @@ CCProgram sprite-fs %{
     img.rgb *= vec3(intensity, intensity, intensity);
     img.rgb *= vec3(u_xlat0_d, u_xlat0_d, u_xlat0_d);
     img.a *= nooise.a * maask.r;
+
+    img.rgba += img.rgba * vec4(maainAddIntensity, maainAddIntensity, maainAddIntensity, maainAddIntensity);
 
     ALPHA_TEST(img);
     return img;
