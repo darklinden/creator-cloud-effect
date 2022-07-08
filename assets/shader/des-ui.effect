@@ -120,7 +120,7 @@ CCProgram sprite-fs %{
     img *= CCSampleWithAlphaSeparated(maainTexture, maainPan);
 
     float u_xlat2x = dot(maask.rgb, magicVec3.xyz);
-    u_xlat2x = maask.a * u_xlat2x;
+    u_xlat2x = maask.r * u_xlat2x;
     float u_xlat4x = img.a * tintColor.a;
     u_xlat4x *= u_xlat2x;
 
@@ -132,9 +132,9 @@ CCProgram sprite-fs %{
     u_xlat0_d = ((u_xlat0_d * u_xlat2x) + (-u_xlat4x));
     u_xlat0_d = u_xlat0_d + u_xlat4x;
 
-    img.rgb *= tintColor.rgb;
+    img.rgba *= tintColor.rgba;
     img.rgb *= vec3(intensity, intensity, intensity);
-    img.rgb *= vec3(u_xlat0_d, u_xlat0_d, u_xlat0_d);
+    //img.rgb *= vec3(u_xlat0_d, u_xlat0_d, u_xlat0_d);
     img.a *= nooise.a * maask.r;
 
     img.rgba += img.rgba * vec4(maainAddIntensity, maainAddIntensity, maainAddIntensity, maainAddIntensity);
