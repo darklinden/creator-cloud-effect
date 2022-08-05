@@ -24,12 +24,20 @@ CCEffect %{
     d1: &d1 { depthTest: true, depthWrite: false }
     r1: &r1 { cullMode: none }
     p1: &p1
-      mainTexture:            { value: grey }
-      maskTexture:            { value: white }
-      mainTiling_Offset:      { value: [1, 1, 0, 0]  }
-    p2: &p2
-      <<: *p1
-      tintColor:              { value: [0.5, 0.5, 0.5, 0.5], editor: { type: color } }
+        tintColor:            { value: [1, 1, 1, 1], linear: true, editor: { type: color } }
+        mainTexture:          { value: white }
+        mainAddIntensity:     { value: 0 }
+        mainPannerX:          { value: 0 }
+        mainPannerY:          { value: 0 }
+        maskTexture:          { value: white }
+        maskPannerX:          { value: 0 }
+        maskPannerY:          { value: 0 }
+        intensity:            { value: 1 }
+        noiseTexture:         { value: white }
+        noiseIntensity:       { value: 0 }
+        noisePannerX:         { value: 0 }
+        noisePannerY:         { value: 0 }
+        magicVec3:            { value: [0.300000012, 0.589999974, 0.109999999, 1] }
 
   techniques:
   - name: add
@@ -39,7 +47,7 @@ CCEffect %{
       rasterizerState: *r1
       depthStencilState: *d1
       blendState: *b1
-      properties: *p2
+      properties: *p1
   - name: alpha-blend
     passes:
     - vert: particle-vs-legacy:lpvs_main
@@ -47,7 +55,7 @@ CCEffect %{
       rasterizerState: *r1
       depthStencilState: *d1
       blendState: *b2
-      properties: *p2
+      properties: *p1
   - name: add-multiply
     passes:
     - vert: particle-vs-legacy:lpvs_main
@@ -55,22 +63,6 @@ CCEffect %{
       rasterizerState: *r1
       depthStencilState: *d1
       blendState: *b3
-      properties: *p2
-  - name: add-smooth
-    passes:
-    - vert: particle-vs-legacy:lpvs_main
-      frag: no-tint-fs:addSmooth
-      rasterizerState: *r1
-      depthStencilState: *d1
-      blendState: *b1
-      properties: *p1
-  - name: premultiply-blend
-    passes:
-    - vert: particle-vs-legacy:lpvs_main
-      frag: no-tint-fs:premultiplied
-      rasterizerState: *r1
-      depthStencilState: *d1
-      blendState: *b2
       properties: *p1
 }%
 
@@ -85,28 +77,96 @@ CCProgram tinted-fs %{
 
   uniform sampler2D mainTexture;
   uniform sampler2D maskTexture;
-  uniform FragConstants {
+  uniform sampler2D noiseTexture;
+
+  uniform XConstants {
     vec4 tintColor;
+    vec4 magicVec3;
+    float mainPannerX;
+    float mainPannerY;
+    float thresold;
+    float intensity;
+    float noiseIntensity;
+    float noisePannerX;
+    float noisePannerY;
+    float maskPannerX;
+    float maskPannerY;
+    float mainAddIntensity;
   };
 
   vec4 add () {
-    vec4 col = 2.0 * color * tintColor * texture(mainTexture, uv);
 
-    vec4 mask = texture(maskTexture, uv);
-    col.a *= mask.r;
-    
-    return CCFragOutput(col);
+    vec2 maskPan = cc_time.xx * vec2(maskPannerX, maskPannerY) + uv;
+    vec4 mask = texture(maskTexture, maskPan);
+
+    vec2 noisePan = cc_time.xx * vec2(noisePannerX, noisePannerY) + uv;
+    vec4 noise = texture(noiseTexture, noisePan);
+
+    float u_xlat6 = uv.y * noiseIntensity;
+    float mainX = dot(noise.rgb, magicVec3.xyz);
+    vec2 mainPan = vec2(mainX, mainX) * vec2(u_xlat6, u_xlat6) + uv;
+    mainPan += cc_time.xx * vec2(mainPannerX, mainPannerY);
+
+    vec4 img = texture(mainTexture, mainPan);
+
+    float u_xlat2x = dot(mask.rgb, magicVec3.xyz);
+    u_xlat2x = mask.r * u_xlat2x;
+    float u_xlat4x = img.a * tintColor.a;
+    u_xlat4x *= u_xlat2x;
+
+    float u_xlat0_d = tintColor.a + tintColor.a;
+    u_xlat0_d -= 1.0;
+    u_xlat0_d = clamp(u_xlat0_d, 0.0, 1.0);
+    u_xlat0_d = img.a * u_xlat0_d;
+
+    u_xlat0_d = ((u_xlat0_d * u_xlat2x) + (-u_xlat4x));
+    u_xlat0_d = u_xlat0_d + u_xlat4x;
+
+    img.rgba *= tintColor.rgba;
+    img.rgb *= vec3(intensity, intensity, intensity);
+    //img.rgb *= vec3(u_xlat0_d, u_xlat0_d, u_xlat0_d);
+    img.a *= noise.a * mask.r;
+
+    img.rgba += img.rgba * vec4(mainAddIntensity, mainAddIntensity, mainAddIntensity, mainAddIntensity);
+      
+    return CCFragOutput(img);
   }
 
   vec4 multiply () {
-    vec4 col;
-    vec4 texColor = texture(mainTexture, uv);
-    col.rgb = tintColor.rgb * texColor.rgb * color.rgb * vec3(2.0);
+    vec2 maskPan = cc_time.xx * vec2(maskPannerX, maskPannerY) + uv;
+    vec4 mask = texture(maskTexture, maskPan);
 
-    vec4 mask = texture(maskTexture, uv);
-    col.a *= mask.r;
+    vec2 noisePan = cc_time.xx * vec2(noisePannerX, noisePannerY) + uv;
+    vec4 noise = texture(noiseTexture, noisePan);
 
-    return CCFragOutput(col);
+    float u_xlat6 = uv.y * noiseIntensity;
+    float mainX = dot(noise.rgb, magicVec3.xyz);
+    vec2 mainPan = vec2(mainX, mainX) * vec2(u_xlat6, u_xlat6) + uv;
+    mainPan += cc_time.xx * vec2(mainPannerX, mainPannerY);
+
+    vec4 img = texture(mainTexture, mainPan);
+
+    float u_xlat2x = dot(mask.rgb, magicVec3.xyz);
+    u_xlat2x = mask.r * u_xlat2x;
+    float u_xlat4x = img.a * tintColor.a;
+    u_xlat4x *= u_xlat2x;
+
+    float u_xlat0_d = tintColor.a + tintColor.a;
+    u_xlat0_d -= 1.0;
+    u_xlat0_d = clamp(u_xlat0_d, 0.0, 1.0);
+    u_xlat0_d = img.a * u_xlat0_d;
+
+    u_xlat0_d = ((u_xlat0_d * u_xlat2x) + (-u_xlat4x));
+    u_xlat0_d = u_xlat0_d + u_xlat4x;
+
+    img.rgba *= tintColor.rgba;
+    img.rgb *= vec3(intensity, intensity, intensity);
+    //img.rgb *= vec3(u_xlat0_d, u_xlat0_d, u_xlat0_d);
+    img.a *= noise.a * mask.r;
+
+    img.rgba += img.rgba * vec4(mainAddIntensity, mainAddIntensity, mainAddIntensity, mainAddIntensity);
+
+    return CCFragOutput(img);
   }
 }%
 
